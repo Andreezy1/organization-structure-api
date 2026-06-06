@@ -18,26 +18,18 @@ func main() {
 
 	departmentRepo := repository.NewDepartmentRepository(dbconn)
 	employeeRepo := repository.NewEmployeeRepository(dbconn)
+	transactionManager := repository.NewTransactionManager(dbconn)
 
-	departmentService := service.NewDepartmentService(departmentRepo, employeeRepo)
+	departmentService := service.NewDepartmentService(departmentRepo, employeeRepo, transactionManager)
 	departmentHandler := handler.NewDepartmentHandler(departmentService)
 
 	employeeService := service.NewEmployeeService(employeeRepo, departmentRepo)
 	employeeHandler := handler.NewEmployeeHandler(employeeService)
 
-	http.HandleFunc("POST /departments", departmentHandler.CreateDepartment)
-	http.HandleFunc("POST /departments/{id}/employees", employeeHandler.CreateEmployee)
-
-	http.HandleFunc("GET /departments/{id}", departmentHandler.GetDepartment)
-	http.HandleFunc("GET /departments/{id}/employees", employeeHandler.GetDepartmentEmployees)
-
-	http.HandleFunc("PATCH /departments/{id}", departmentHandler.UpdateDepartment)
-
-	http.HandleFunc("DELETE /departments/{id}", departmentHandler.DeleteDepartment)
-
+	handler.RegisterRoute(departmentHandler, employeeHandler)
 	loggedMux := middleware.Logger(http.DefaultServeMux)
 
-	log.Println("server started in :8080")
+	log.Printf("server started in :%s", cfg.AppPort)
 	if err := http.ListenAndServe(":"+cfg.AppPort, loggedMux); err != nil {
 		log.Fatalf("Server failed to start: %s\n", err)
 	}

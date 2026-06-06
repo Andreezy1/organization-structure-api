@@ -3,13 +3,18 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"org_struct_api/internal/dto"
 	"org_struct_api/internal/models"
 	"org_struct_api/internal/service"
-	"strconv"
 )
 
+type EmployeeService interface {
+	CreateEmployee(employee *models.Employee) (*models.Employee, error)
+	GetDepartmentEmployees(departmentID uint) ([]models.Employee, error)
+}
+
 type EmployeeHandler struct {
-	employeeService *service.EmployeeService
+	employeeService EmployeeService
 }
 
 func NewEmployeeHandler(employeeService *service.EmployeeService) *EmployeeHandler {
@@ -17,87 +22,45 @@ func NewEmployeeHandler(employeeService *service.EmployeeService) *EmployeeHandl
 }
 
 func (h *EmployeeHandler) CreateEmployee(w http.ResponseWriter, r *http.Request) {
+	var employee dto.CreateEmployeeRequest
 
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	var employee models.Employee
-
-	idStr := r.PathValue("id")
-
-	departmentID, err := strconv.Atoi(idStr)
+	id, err := parsePathID(r, "id")
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "invalid department id",
-		})
-
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&employee); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(
-			map[string]string{
-				"error": err.Error(),
-			})
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	employee.DepartmentID = uint(departmentID)
-
-	createdEmployee, err := h.employeeService.CreateEmployee(&employee)
-
+	createdEmployee, err := h.employeeService.CreateEmployee(&models.Employee{
+		DepartmentID: id,
+		FullName:     employee.FullName,
+		Position:     employee.Position,
+		HiredAt:      employee.HiredAt,
+	})
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": err.Error()})
+		writeServiceError(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(createdEmployee)
+	writeJSON(w, http.StatusCreated, createdEmployee)
 }
 
 func (h *EmployeeHandler) GetDepartmentEmployees(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-
-	departmentIDstr := r.URL.Query().Get("id")
-
-	if departmentIDstr == "" {
-		w.WriteHeader(http.StatusBadRequest)
-
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "department id is required",
-		})
-
-		return
-	}
-
-	departmentID, err := strconv.Atoi(departmentIDstr)
-
+	departmentID, err := parsePathID(r, "id")
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": err.Error()})
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	employees, err := h.employeeService.GetDepartmentEmployees(uint(departmentID))
-
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": err.Error()})
+		writeServiceError(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(employees)
+	writeJSON(w, http.StatusOK, employees)
 }

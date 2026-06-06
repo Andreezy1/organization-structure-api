@@ -22,7 +22,7 @@ func (m *mockDepartmentService) CreateDepartment(department *models.Department) 
 	return nil, nil
 }
 
-func (m *mockDepartmentService) UpdateDepartment(id uint, name string, parentID *uint) (*models.Department, error) {
+func (m *mockDepartmentService) UpdateDepartment(id uint, name string, parentID models.Patch[*uint]) (*models.Department, error) {
 	return nil, nil
 }
 

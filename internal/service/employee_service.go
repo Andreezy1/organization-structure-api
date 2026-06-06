@@ -2,41 +2,42 @@ package service
 
 import (
 	"errors"
+	"fmt"
+	"org_struct_api/internal/contracts"
 	"org_struct_api/internal/models"
-	"org_struct_api/internal/repository"
-	"strings"
 )
 
 type EmployeeService struct {
-	employeeRepo   *repository.EmployeeRepository
-	departmentRepo *repository.DepartmentRepository
+	employeeRepo   contracts.EmployeeRepo
+	departmentRepo contracts.DeportmentRepo
 }
 
-func NewEmployeeService(employeeRepo *repository.EmployeeRepository,
-	departmentRepo *repository.DepartmentRepository) *EmployeeService {
+func NewEmployeeService(employeeRepo contracts.EmployeeRepo,
+	departmentRepo contracts.DeportmentRepo) *EmployeeService {
 	return &EmployeeService{employeeRepo: employeeRepo,
 		departmentRepo: departmentRepo}
 }
 
-func (es *EmployeeService) CreateEmployee(employee *models.Employee) (*models.Employee, error) {
-	employee.FullName = strings.TrimSpace(employee.FullName)
-	employee.Position = strings.TrimSpace(employee.Position)
-
-	if employee.FullName == "" {
-		return nil, errors.New("employee name is required")
-	}
-
-	if employee.Position == "" {
-		return nil, errors.New("employee position is required")
-	}
-
-	_, err := es.departmentRepo.FindByID(employee.DepartmentID)
+func (s *EmployeeService) CreateEmployee(employee *models.Employee) (*models.Employee, error) {
+	fullname, err := validate("name", employee.FullName)
 	if err != nil {
-		return nil, errors.New("department not found")
+		return nil, models.ErrValidation
+	}
+	position, err := validate("name", employee.Position)
+	if err != nil {
+		return nil, models.ErrValidation
+	}
+	exists, err := s.departmentRepo.ExistsByID(employee.DepartmentID)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, fmt.Errorf("%w: department", models.ErrNotFound)
 	}
 
-	err = es.employeeRepo.Create(employee)
-
+	employee.FullName = fullname
+	employee.Position = position
+	err = s.employeeRepo.Create(employee)
 	if err != nil {
 		return nil, err
 	}
@@ -44,12 +45,12 @@ func (es *EmployeeService) CreateEmployee(employee *models.Employee) (*models.Em
 	return employee, nil
 }
 
-func (es *EmployeeService) GetDepartmentEmployees(departmentID uint) ([]models.Employee, error) {
-	_, err := es.departmentRepo.FindByID(departmentID)
+func (s *EmployeeService) GetDepartmentEmployees(departmentID uint) ([]models.Employee, error) {
+	_, err := s.departmentRepo.FindByID(departmentID)
 	if err != nil {
 		return nil, errors.New("department not found")
 	}
-	employees, err := es.employeeRepo.FindByDepartmentID(departmentID)
+	employees, err := s.employeeRepo.FindByDepartmentID(departmentID)
 	if err != nil {
 		return nil, err
 	}
