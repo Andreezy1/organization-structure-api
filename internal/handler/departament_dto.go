@@ -1,4 +1,4 @@
-package dto
+package handler
 
 import "org_struct_api/internal/models"
 

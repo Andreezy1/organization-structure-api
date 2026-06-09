@@ -9,8 +9,8 @@ type DeportmentRepo interface {
 	ExistsByNameAndParent(name string, parentID *uint) (bool, error)
 	FindByID(id uint) (*models.Department, error)
 	GetChildren(parentID uint) ([]models.Department, error)
-	GetRootDepartments() ([]models.Department, error)
 	Update(department *models.Department) error
+	GetChildrenBatch(parentIDs []uint) ([]models.Department, error)
 }
 
 type TxManager interface {

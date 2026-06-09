@@ -54,34 +54,29 @@ func TestGetDepartment_InvalidID(t *testing.T) {
 
 func TestGetDepartment_WrongMethod(t *testing.T) {
 	h := NewDepartmentHandler(&mockDepartmentService{})
-
-	req := httptest.NewRequest(http.MethodPost, "/departments/1", nil)
-
-	req.SetPathValue("id", "1")
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /departments/{id}", h.GetDepartment)
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/departments/1",
+		nil,
+	)
 
 	rr := httptest.NewRecorder()
-
-	h.GetDepartment(rr, req)
-
+	mux.ServeHTTP(rr, req)
 	if rr.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("expected %d got %d",
 			http.StatusMethodNotAllowed,
-			rr.Code,
-		)
+			rr.Code)
 	}
 }
 
 func TestGetDepartment_Success(t *testing.T) {
 	h := NewDepartmentHandler(&mockDepartmentService{})
-
 	req := httptest.NewRequest(http.MethodGet, "/departments/1", nil)
-
 	req.SetPathValue("id", "1")
-
 	rr := httptest.NewRecorder()
-
 	h.GetDepartment(rr, req)
-
 	if rr.Code != http.StatusOK {
 		t.Fatalf(
 			"expected %d got %d",

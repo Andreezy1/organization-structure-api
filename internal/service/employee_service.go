@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"fmt"
 	"org_struct_api/internal/contracts"
 	"org_struct_api/internal/models"
@@ -21,11 +20,11 @@ func NewEmployeeService(employeeRepo contracts.EmployeeRepo,
 func (s *EmployeeService) CreateEmployee(employee *models.Employee) (*models.Employee, error) {
 	fullname, err := validate("name", employee.FullName)
 	if err != nil {
-		return nil, models.ErrValidation
+		return nil, err
 	}
-	position, err := validate("name", employee.Position)
+	position, err := validate("position", employee.Position)
 	if err != nil {
-		return nil, models.ErrValidation
+		return nil, err
 	}
 	exists, err := s.departmentRepo.ExistsByID(employee.DepartmentID)
 	if err != nil {
@@ -43,16 +42,4 @@ func (s *EmployeeService) CreateEmployee(employee *models.Employee) (*models.Emp
 	}
 
 	return employee, nil
-}
-
-func (s *EmployeeService) GetDepartmentEmployees(departmentID uint) ([]models.Employee, error) {
-	_, err := s.departmentRepo.FindByID(departmentID)
-	if err != nil {
-		return nil, errors.New("department not found")
-	}
-	employees, err := s.employeeRepo.FindByDepartmentID(departmentID)
-	if err != nil {
-		return nil, err
-	}
-	return employees, nil
 }

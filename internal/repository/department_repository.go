@@ -29,24 +29,6 @@ func (r *DepartmentRepository) FindByID(id uint) (*models.Department, error) {
 	return &department, nil
 }
 
-// func (dr *DepartmentRepository) FindByNameAndParent(
-// 	name string,
-// 	parentID *uint,
-// ) (*models.Department, error) {
-// 	var department models.Department
-// 	query := dr.db.Where("name = ?", name)
-// 	if parentID == nil {
-// 		query = query.Where("parent_id IS NULL")
-// 	} else {
-// 		query = query.Where("parent_id = ?", *parentID)
-// 	}
-// 	err := query.First(&department).Error
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return &department, nil
-// }
-
 func (r *DepartmentRepository) ExistsByNameAndParent(
 	name string,
 	parentID *uint,
@@ -79,9 +61,9 @@ func (r *DepartmentRepository) ExistsByID(id uint) (bool, error) {
 	return count > 0, nil
 }
 
-func (r *DepartmentRepository) GetRootDepartments() ([]models.Department, error) {
+func (r *DepartmentRepository) GetChildren(parentID uint) ([]models.Department, error) {
 	var departments []models.Department
-	query := r.db.Preload("Children").Where("parent_id IS NULL")
+	query := r.db.Where("parent_id = ?", parentID)
 	err := query.Find(&departments).Error
 	if err != nil {
 		return nil, mapError(err)
@@ -89,10 +71,11 @@ func (r *DepartmentRepository) GetRootDepartments() ([]models.Department, error)
 	return departments, nil
 }
 
-func (r *DepartmentRepository) GetChildren(parentID uint) ([]models.Department, error) {
+func (r *DepartmentRepository) GetChildrenBatch(parentIDs []uint) ([]models.Department, error) {
 	var departments []models.Department
-	query := r.db.Where("parent_id = ?", parentID)
-	err := query.Find(&departments).Error
+	err := r.db.
+		Where("parent_id IN ?", parentIDs).
+		Find(&departments).Error
 	if err != nil {
 		return nil, mapError(err)
 	}
@@ -105,7 +88,7 @@ func (r *DepartmentRepository) Delete(id uint) error {
 		return mapError(result.Error)
 	}
 	if result.RowsAffected == 0 {
-		return mapError(result.Error)
+		return models.ErrNotFound
 	}
 	return nil
 }
@@ -116,7 +99,7 @@ func (r *DepartmentRepository) Update(department *models.Department) error {
 		return mapError(result.Error)
 	}
 	if result.RowsAffected == 0 {
-		return mapError(result.Error)
+		return models.ErrNotFound
 	}
 	return nil
 }

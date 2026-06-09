@@ -3,26 +3,23 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"org_struct_api/internal/dto"
 	"org_struct_api/internal/models"
-	"org_struct_api/internal/service"
 )
 
 type EmployeeService interface {
 	CreateEmployee(employee *models.Employee) (*models.Employee, error)
-	GetDepartmentEmployees(departmentID uint) ([]models.Employee, error)
 }
 
 type EmployeeHandler struct {
 	employeeService EmployeeService
 }
 
-func NewEmployeeHandler(employeeService *service.EmployeeService) *EmployeeHandler {
+func NewEmployeeHandler(employeeService EmployeeService) *EmployeeHandler {
 	return &EmployeeHandler{employeeService: employeeService}
 }
 
 func (h *EmployeeHandler) CreateEmployee(w http.ResponseWriter, r *http.Request) {
-	var employee dto.CreateEmployeeRequest
+	var employee CreateEmployeeRequest
 
 	id, err := parsePathID(r, "id")
 	if err != nil {
@@ -47,20 +44,4 @@ func (h *EmployeeHandler) CreateEmployee(w http.ResponseWriter, r *http.Request)
 	}
 
 	writeJSON(w, http.StatusCreated, createdEmployee)
-}
-
-func (h *EmployeeHandler) GetDepartmentEmployees(w http.ResponseWriter, r *http.Request) {
-	departmentID, err := parsePathID(r, "id")
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	employees, err := h.employeeService.GetDepartmentEmployees(uint(departmentID))
-	if err != nil {
-		writeServiceError(w, err)
-		return
-	}
-
-	writeJSON(w, http.StatusOK, employees)
 }

@@ -12,7 +12,9 @@ CREATE TABLE departments (
 );
 
 CREATE UNIQUE INDEX unique_department_name_per_parent
-ON departments(name, parent_id);
+ON departments(name, parent_id) NULLS NOT DISTINCT;
+
+CREATE INDEX idx_departments_parent_id ON departments(parent_id);
 
 CREATE TABLE employees (
     id SERIAL PRIMARY KEY,
@@ -27,6 +29,8 @@ CREATE TABLE employees (
         REFERENCES departments(id)
         ON DELETE CASCADE
 );
+
+CREATE INDEX idx_employees_department_id ON employees(department_id);
 
 -- +goose Down
 DROP TABLE employees;

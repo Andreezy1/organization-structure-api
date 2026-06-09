@@ -62,30 +62,11 @@ func (s *DepartmentService) CreateDepartment(department *models.Department) (*mo
 	return department, nil
 }
 
-func (s *DepartmentService) loadChildren(department *models.Department, depth int) error {
-	if depth <= 0 {
-		return nil
-	}
-	children, err := s.departmentRepo.GetChildren(department.ID)
-	if err != nil {
-		return err
-	}
-
-	department.Children = children
-	for i := range department.Children {
-		err := s.loadChildren(&department.Children[i], depth-1)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (s *DepartmentService) DeleteDepartment(departmentID uint, mode string, reassignTo *uint) error {
-	switch {
-	case mode == "cascade":
+	switch mode {
+	case "cascade":
 		return s.departmentRepo.Delete(departmentID)
-	case mode == "reassign":
+	case "reassign":
 		if reassignTo == nil {
 			return fmt.Errorf("%w: reassign_to_department_id is required", models.ErrValidation)
 		}
@@ -201,7 +182,7 @@ func (s *DepartmentService) GetDepartment(id uint, depth int, includeEmployees b
 		depth = maxTreeDepth
 	}
 
-	err = s.loadChildren(department, depth)
+	err = s.loadChildrenBFS(department, depth)
 	if err != nil {
 		return nil, err
 	}
@@ -214,4 +195,36 @@ func (s *DepartmentService) GetDepartment(id uint, depth int, includeEmployees b
 		department.Employees = employees
 	}
 	return department, nil
+}
+
+func (s *DepartmentService) loadChildrenBFS(root *models.Department, maxDepth int) error {
+	nodes := map[uint]*models.Department{
+		root.ID: root,
+	}
+	currentLevel := []uint{root.ID}
+	for level := 0; level < maxDepth; level++ {
+		children, err := s.departmentRepo.GetChildrenBatch(currentLevel)
+		if err != nil {
+			return err
+		}
+		if len(children) == 0 {
+			break
+		}
+		nextLevel := make([]uint, 0, len(children))
+		for i := range children {
+			child := &children[i]
+			nodes[child.ID] = child
+			nextLevel = append(nextLevel, child.ID)
+		}
+		for i := range children {
+			child := &children[i]
+			if child.ParentID == nil {
+				continue
+			}
+			parent := nodes[*child.ParentID]
+			parent.Children = append(parent.Children, child)
+		}
+		currentLevel = nextLevel
+	}
+	return nil
 }

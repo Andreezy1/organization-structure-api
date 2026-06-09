@@ -65,3 +65,16 @@ func queryIntDefault(r *http.Request, key string, def int) (int, error) {
 	}
 	return n, nil
 }
+
+func queryUintPtr(r *http.Request, key string) (*uint, error) {
+	s := r.URL.Query().Get(key)
+	if s == "" {
+		return nil, nil
+	}
+	n, err := strconv.ParseUint(s, 10, 32)
+	if err != nil {
+		return nil, fmt.Errorf("invalid %s: %w", key, err)
+	}
+	v := uint(n)
+	return &v, nil
+}

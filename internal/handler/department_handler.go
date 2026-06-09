@@ -3,9 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"org_struct_api/internal/dto"
 	"org_struct_api/internal/models"
-	"strconv"
 )
 
 type DepartmentService interface {
@@ -26,7 +24,7 @@ func NewDepartmentHandler(departmentService DepartmentService) *DepartmentHandle
 }
 
 func (h *DepartmentHandler) CreateDepartment(w http.ResponseWriter, r *http.Request) {
-	var department dto.CreateDepartmentRequest
+	var department CreateDepartmentRequest
 	if err := json.NewDecoder(r.Body).Decode(&department); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -53,16 +51,10 @@ func (h *DepartmentHandler) DeleteDepartment(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var reassignTo *uint
-	reassign_to_department_id_str := r.URL.Query().Get("reassign_to_department_id")
-	if reassign_to_department_id_str != "" {
-		id, err := strconv.Atoi(reassign_to_department_id_str)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
-			return
-		}
-		tmp := uint(id)
-		reassignTo = &tmp
+	reassignTo, err := queryUintPtr(r, "reassign_to_department_id")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	err = h.departmentService.DeleteDepartment(uint(departmentID), mode, reassignTo)
@@ -75,7 +67,7 @@ func (h *DepartmentHandler) DeleteDepartment(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *DepartmentHandler) UpdateDepartment(w http.ResponseWriter, r *http.Request) {
-	var departmentRequest dto.UpdateDepartmentRequest
+	var departmentRequest UpdateDepartmentRequest
 	id, err := parsePathID(r, "id")
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())

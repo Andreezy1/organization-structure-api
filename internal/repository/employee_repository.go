@@ -38,5 +38,12 @@ func (r *EmployeeRepository) FindByDepartmentID(departmentID uint) ([]models.Emp
 }
 
 func (r *EmployeeRepository) ReassignDepartment(fromDepartmentID uint, toDepartmentID uint) error {
-	return r.db.Model(&models.Employee{}).Where("department_id = ?", fromDepartmentID).Update("department_id", toDepartmentID).Error
+	result := r.db.Model(&models.Employee{}).Where("department_id = ?", fromDepartmentID).Update("department_id", toDepartmentID)
+	if result.Error != nil {
+		return mapError(result.Error)
+	}
+	if result.RowsAffected == 0 {
+		return models.ErrNotFound
+	}
+	return nil
 }
